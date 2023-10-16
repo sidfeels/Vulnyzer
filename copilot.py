@@ -23,11 +23,11 @@ def openai_agent_test(messages, model="gpt-4"):
     )
 
     if r.status_code != 200:
-        return "Sorry, Bot is under maintenance. *GPT4 pr itna dependend mt rhe bhay* :)"
+        return "Sorry, Bot is under maintenance. *GPT-4 pr itna dependend mt rhe bhay* :)"
 
     return r.json()["choices"][0]["message"]["content"]
   
-st.title('Codex-GPT-4-2-32k')
+st.title('GPT-4-32k')
 
 if 'last_user_question' not in st.session_state:
     st.session_state.last_user_question = ""
@@ -53,10 +53,10 @@ if history_expander:
         if message["role"] == "user":
             history_expander.write(f"You: {message['content']}")
         else:
-            history_expander.write(f"Codex: {message['content']}")
+            history_expander.write(f"GPT-4: {message['content']}")
 
 # After rerun, show only the latest conversation
 if st.session_state.messages:
     last_msg = st.session_state.messages[-2:]
     chat_placeholder.markdown(f'**You**: {last_msg[0]["content"]}')
-    chat_placeholder.markdown(f'**Codex**: {last_msg[1]["content"]}')
+    chat_placeholder.markdown(f'**GPT-4**: {last_msg[1]["content"]}')
