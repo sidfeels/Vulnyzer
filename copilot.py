@@ -29,23 +29,24 @@ def openai_agent_test(messages, model="gpt-4"):
   
 st.title('GPT-4-32k')
 
-if 'last_user_question' not in st.session_state:
-    st.session_state.last_user_question = ""
+user_question = st.text_area('### Enter your question (ctrl+enter to send):', height=100)
 
-# Use st.text_area for multiline user question
-user_question = st.text_area('### Enter your question and press Ctrl+Enter to Send:', height=100)
+ask_button = st.button("Ask")
 
-# Placeholder for current conversation
-chat_placeholder = st.empty()
+last_question = st.session_state.get('last_user_question', '')
 
-# Detect user input
-if user_question != st.session_state.last_user_question and user_question.strip():
+if (ask_button and user_question.strip()) or (user_question != last_question and user_question.strip()):
     st.session_state.last_user_question = user_question
     st.session_state.messages.append({"role": "user", "content": user_question})
     response = openai_agent_test([{"role":"user", "content": user_question}])
     st.session_state.messages.append({"role": "bot", "content": response})
-    # Rerun the app to update the chat log
-    st.experimental_rerun()
+   
+chat_placeholder = st.empty()
+
+if st.session_state.messages:
+    last_msg = st.session_state.messages[-1:]
+    chat_placeholder.markdown(f'**You**: {st.session_state.last_user_question}')
+    chat_placeholder.markdown(f'**GPT-4**: {last_msg[0]["content"]}')
 
 history_expander = st.sidebar.expander('Show History')
 if history_expander: 
@@ -53,10 +54,4 @@ if history_expander:
         if message["role"] == "user":
             history_expander.write(f"You: {message['content']}")
         else:
-            history_expander.write(f"GPT-4: {message['content']}")
-
-# After rerun, show only the latest conversation
-if st.session_state.messages:
-    last_msg = st.session_state.messages[-2:]
-    chat_placeholder.markdown(f'**You**: {last_msg[0]["content"]}')
-    chat_placeholder.markdown(f'**GPT-4**: {last_msg[1]["content"]}')
+            history_expander.write(f"GPT-4: {message['content']}")  
