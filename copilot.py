@@ -4,7 +4,7 @@ import time
 
 # Setting page title and header
 st.set_page_config(page_title="GPT-4", page_icon=":robot_face:")
-st.markdown("<h1 style='text-align: center;'>GPT-4-32K</h1>", unsafe_allow_html=True)
+
 
 # Function to get token
 def get_token():
@@ -63,29 +63,23 @@ def openai_agent_test(messages, model="gpt-4"):
 
     return r.json()["choices"][0]["message"]["content"]
 
-# Sidebar - clear conversation button and system prompt input
-clear_button = st.sidebar.button("Clear Conversation", key="clear")
-system_prompt = st.sidebar.text_area("System Prompt", value=st.session_state.system_prompt)
-
-# Update system prompt
-st.session_state.system_prompt = system_prompt
+with st.form("my_form"):
+    user_input = st.text_area("GPT-4-32K:", key='input', height=100)
+    submit_button = st.form_submit_button(label='Ask')
+    clear_button = st.form_submit_button(label='Clear Conversation')
 
 # Reset everything
 if clear_button:
     st.session_state['messages'] = [{"role": "system", "content": st.session_state.system_prompt}]
-
-with st.form("my_form"):
-    user_input = st.text_area("You:", key='input', height=100)
-    submit_button = st.form_submit_button(label='Ask')
 
 if submit_button and user_input:
     st.session_state['messages'].append({"role": "user", "content": user_input})
     output = openai_agent_test(st.session_state['messages'], "gpt-4")
     st.session_state['messages'].append({"role": "assistant", "content": output})
     st.markdown(f'**GPT-4**: {output}')
-    
 
-history_expander = st.sidebar.expander('Show History')
+# Show History
+history_expander = st.expander('Show History')
 if history_expander: 
     for message in st.session_state.messages:
         if message["role"] == "user":
