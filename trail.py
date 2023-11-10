@@ -83,7 +83,6 @@ if submit_button and user_input:
     output = openai_agent_test(st.session_state['messages'], "gpt-4")
     st.session_state['messages'].append({"role": "assistant", "content": output})
     st.markdown(f'**GPT-4**: {output}')
-    
 
 history_expander = st.sidebar.expander('Show History')
 if history_expander: 
