@@ -6,7 +6,7 @@ import time
 st.set_page_config(page_title="GPT", page_icon=":robot_face:")
 
 # Sidebar for model and role selection
-model = st.sidebar.selectbox("Select Model", ["gpt-4","gpt-3.5"])
+model = st.sidebar.selectbox("Select Model", ["gpt-4","gpt-3.5-turbo"])
 role = st.sidebar.selectbox("Select Role", [ "sid", "default", "Sia", "LAN", "CodeRed" , "Custom"])
 
 # Define role prompts
@@ -25,7 +25,6 @@ if "selected_role" not in st.session_state or st.session_state.selected_role != 
     st.session_state.selected_role = role
     if role != "Custom":
         st.session_state.system_prompt = role_prompts[role]
-    st.session_state['messages'] = []
 
 # Custom system prompt
 custom_prompt = st.sidebar.text_input("Custom System Prompt", st.session_state.system_prompt)
@@ -61,7 +60,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Function to interact with the chatbot
-def openai_agent_test(messages, model="gpt-4"):
+def openai_agent_test(messages, model):
     global token, token_time
 
     # Check if token is older than 10 minutes, if so, fetch a new one
@@ -97,20 +96,19 @@ if clear_button:
     st.session_state['messages'] = [{"role": "system", "content": st.session_state.system_prompt}]
 
 if submit_button and user_input:
-    # If it's a new conversation, add the system prompt as the first message
-    if not st.session_state['messages']:
-        st.session_state['messages'].append({"role": "system", "content": st.session_state.system_prompt})
-
-    # Append the user's message to the messages list with the role set to "user"
+    # Append the user's message to the messages list
     st.session_state['messages'].append({"role": "user", "content": user_input})
 
-    # Call the openai_agent_test function with the entire conversation history and the model
+    # Create a list of messages for the chatbot
+    messages = [
+        {"role": "system", "content": st.session_state.system_prompt},
+        {"role": "user", "content": user_input}
+    ]
+
+    st.session_state['messages'].append({"role": "user", "content": user_input})
     output = openai_agent_test(st.session_state['messages'], model)
-
-    # Append the chatbot's response to the messages list with the role set to "assistant"
-    st.session_state['messages'].append({"role": "assistant", "content": output})
-
-    st.markdown(f'**{model.upper()}**: {output}')
+    st.session_state['messages'].append({"role": "system", "content": output})
+    st.markdown(f'**{model.upper()}**: {output}') # use the selected model in the markdown output
 
 # Show History
 history_expander = st.expander('Show History')
