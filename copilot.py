@@ -1,13 +1,27 @@
 import streamlit as st
 import requests
 import time
+import asyncio
+import httpx
+
 
 # Setting page title and header
 st.set_page_config(page_title="GPT", page_icon=":robot_face:")
 
-# Sidebar for model and role selection
-model = st.sidebar.selectbox("Select Model", ["gpt-4","gpt-3.5"])
+# Sidebar for model selection
+default_models = ["gpt-4","gpt-3.5", "Custom"]
+selected_model = st.sidebar.selectbox("Select Model", default_models)
+
+# If 'Custom' is selected, show an additional input field for custom model name
+if selected_model == "Custom":
+    model = st.sidebar.text_input("Input Custom Model")
+else:
+    model = selected_model
+    
 role = st.sidebar.selectbox("Select Role", [ "sid", "default", "Sia", "LAN", "CodeRed" , "Custom"])
+
+# Sidebar for temperature control
+temperature = st.sidebar.slider("Set Temperature", min_value=0.0, max_value=1.0, value=0.4, step=0.1)
 
 
 # Define role prompts
@@ -60,35 +74,34 @@ if "token" not in st.session_state:
     st.session_state.token_time = time.time()
 
 # Function to interact with the chatbot
-def openai_agent_test(messages, model="gpt-4"):
-    # Check if token is older than 10 minutes, if so, fetch a new one
-    if time.time() - st.session_state.token_time > 600:  # 600 seconds = 10 minutes
+async def openai_agent_test(messages, model="gpt-4",temperature=0.4):
+    if time.time() - st.session_state.token_time > 600:
         st.session_state.token = get_token()
         st.session_state.token_time = time.time()
 
-    r = requests.post(
-        "https://api.githubcopilot.com/chat/completions",
-        headers={
-            "Editor-Version":"vscode/1.83.0",
-            "Authorization": f"Bearer {st.session_state.token}",
-        },
-        json={
-            "messages":messages,
-            "model":model,
-            "temperature":0.4,
-            "role":st.session_state.selected_role,  # Add the selected role here
-        }
-    )
+    async with httpx.AsyncClient() as client:
+        r = await client.post(
+            "https://api.githubcopilot.com/chat/completions",
+            headers={
+                "Editor-Version":"vscode/1.83.0",
+                "Authorization": f"Bearer {st.session_state.token}",
+            },
+            json={
+                "messages":messages,
+                "model":model,
+                "temperature":temperature,
+                "role":st.session_state.selected_role,
+            },
+            timeout=130.0
+        )
 
     if r.status_code != 200:
-        return "Sorry, Bot is under maintenance. *GPT-4 pr itna dependend mt rhe bhay* :)"
+        return "Response 404"
 
     return r.json()["choices"][0]["message"]["content"]
 
-# ...
-
 # Get assistant response
-assistant_response = openai_agent_test(st.session_state.messages, model)  # Pass the selected model here
+assistant_response = asyncio.run(openai_agent_test(st.session_state.messages, model, temperature)) # Pass the selected model here
 
 # Clear conversation button
 if st.sidebar.button('Clear conversation'):
@@ -116,7 +129,7 @@ if prompt := st.chat_input("What's up?"):
         st.markdown(prompt)
 
     # Get assistant response
-    assistant_response = openai_agent_test(st.session_state.messages, model=model)  # Pass the selected model here
+    assistant_response = asyncio.run(openai_agent_test(st.session_state.messages, model=model))  # Pass the selected model here
 
     # Display assistant response in chat message container
     with st.chat_message("assistant"):
