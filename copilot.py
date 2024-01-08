@@ -21,7 +21,7 @@ else:
 role = st.sidebar.selectbox("Select Role", [ "sid", "default", "Sia", "LAN", "CodeRed" , "Custom"])
 
 # Sidebar for temperature control
-temperature = st.sidebar.slider("Set Temperature", min_value=0.0, max_value=1.0, value=0.4, step=0.1)
+temperature = st.sidebar.slider("Set Temperature", min_value=0.0, max_value=2.0, value=0.7, step=0.1)
 
 
 # Define role prompts
@@ -74,7 +74,7 @@ if "token" not in st.session_state:
     st.session_state.token_time = time.time()
 
 # Function to interact with the chatbot
-async def openai_agent_test(messages, model="gpt-4",temperature=0.4):
+async def openai_agent_test(messages, model="gpt-4",temperature=0.7):
     if time.time() - st.session_state.token_time > 600:
         st.session_state.token = get_token()
         st.session_state.token_time = time.time()
@@ -128,19 +128,21 @@ if prompt := st.chat_input("What's up?"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Create a placeholder for the assistant's response
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+
     # Get assistant response
     assistant_response = asyncio.run(openai_agent_test(st.session_state.messages, model=model))  # Pass the selected model here
 
     # Display assistant response in chat message container
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        full_response = ""
-        # Simulate stream of response with milliseconds delay
-        for chunk in assistant_response.split('. '):
-            full_response += chunk + "\n"
-            time.sleep(0.05)
-            # Add a blinking cursor to simulate typing
-            message_placeholder.markdown(full_response + "▌")
-        message_placeholder.markdown(full_response)
+    full_response = ""
+    # Simulate stream of response with milliseconds delay
+    for chunk in assistant_response.split('. '):
+        full_response += chunk + "\n"
+        time.sleep(0.05)
+        # Add a blinking cursor to simulate typing
+        message_placeholder.markdown(full_response + "▌")
+    message_placeholder.markdown(full_response)
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": full_response})

@@ -18,7 +18,7 @@ def novaai_wow_vision(input_content, img_url):
                     "content":json.dumps([input_content, {"image":img_url}]),
                 },
             ],
-            "model":"gpt-4-vision-",
+            "model":"gpt-4",
             "temperature":0.7,
         }
     )
