@@ -3,3 +3,5 @@ streamlit
 streamlit-lottie
 httpx
 openai
+beautifulsoup4
+PyPDF2
