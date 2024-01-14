@@ -21,7 +21,7 @@ else:
 role = st.sidebar.selectbox("Select Role", [ "sid", "default", "Sia", "Research", "CodeRed" , "Custom"])
 
 # Sidebar for temperature control
-temperature = st.sidebar.slider("Set Temperature", min_value=0.0, max_value=2.0, value=0.7, step=0.1)
+temperature = st.sidebar.slider("Set Temperature", min_value=0.0, max_value=2.0, value=0.6, step=0.1)
 
 
 # Define role prompts
@@ -74,7 +74,7 @@ if "token" not in st.session_state:
     st.session_state.token_time = time.time()
 
 # Function to interact with the chatbot
-async def openai_agent_test(messages, model="gpt-4",temperature=0.7):
+async def openai_agent_test(messages, model="gpt-4",temperature=0.5):
     if time.time() - st.session_state.token_time > 600:
         st.session_state.token = get_token()
         st.session_state.token_time = time.time()

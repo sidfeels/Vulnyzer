@@ -3,19 +3,10 @@ import requests
 import time
 import asyncio
 import httpx
-from bs4 import BeautifulSoup
-import PyPDF2
-from io import BytesIO
-import re
+
 
 # Setting page title and header
-st.set_page_config(page_title="GPT-4-32K", page_icon=":robot_face:")
-
-MAX_TOKENS = 31000  # adjust as needed
-
-# Function to count the number of tokens in a text
-def count_tokens(text):
-    return len(text.split())  # simple whitespace tokenization
+st.set_page_config(page_title="GPT", page_icon=":robot_face:")
 
 # Sidebar for model selection
 default_models = ["gpt-4","gpt-3.5", "Custom"]
@@ -31,7 +22,7 @@ role = st.sidebar.selectbox("Select Role", ["Default", "Research Mode", "Sia (So
 
 
 # Sidebar for temperature control
-temperature = st.sidebar.slider("Set Temperature", min_value=0.0, max_value=2.0, value=0.7, step=0.1)
+temperature = st.sidebar.slider("Set Temperature", min_value=0.0, max_value=2.0, value=0.5, step=0.1)
 
 # Define role prompts
 role_prompts = {
@@ -49,61 +40,16 @@ if "selected_role" not in st.session_state or st.session_state.selected_role != 
     st.session_state.selected_role = role
     if role != "Custom":
         st.session_state.system_prompt = role_prompts[role]
-    else:
-        st.session_state.system_prompt = ""  # reset system prompt for custom role
     st.session_state['messages'] = []
 
 # Custom system prompt
-if role == "Custom":
-    custom_prompt = st.sidebar.text_input("Custom System Prompt", st.session_state.system_prompt)
-    if custom_prompt != st.session_state.system_prompt:
-        st.session_state.system_prompt = custom_prompt
-
-
-
-# If 'Research' is selected, show options to upload PDF or enter URL
-
-uploaded_file = st.sidebar.file_uploader("Upload smaller PDF for better result", type=['pdf'])
-if uploaded_file is not None and ('pdf_uploaded' not in st.session_state or st.session_state.pdf_uploaded != uploaded_file.name):
-    from PyPDF4 import PdfFileReader
-    reader = PdfFileReader(uploaded_file)
-    document_text = "The content of the PDF I Uploaded is the reference information, which will help if you needed to get more context aware of the study or research I want to perform or explore. The content of the PDF are as text and are as follows: "
-    for page in range(reader.getNumPages()):
-        document_text += reader.getPage(page).extractText()
-
-    # Clean up the extracted text
-    document_text = re.sub('\s+', ' ', document_text)  # Replace multiple spaces with a single space
-    document_text = document_text.replace('\n', '')  # Remove newlines
-
-    # Check the token count before adding the document text to the chat messages
-    if count_tokens(document_text) <= MAX_TOKENS:
-        st.session_state.messages.append({"role": "system", "content": document_text})
-        st.session_state.messages.append({"role": "system", "content": st.session_state.system_prompt})
-        st.session_state.pdf_uploaded = uploaded_file.name  # Set a flag to indicate that the PDF has been uploaded
-    else:
-        st.warning("The content of the PDF is too large and can't be processed.")
-
-url = st.sidebar.text_input('Chat With Website')
-if url and ('url_entered' not in st.session_state or st.session_state.url_entered != url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    web_text = "The content of the website I uploaded is the reference information for my research, which will help if you needed to get more context aware of the study or research i want to perform or explore the content of the pdf are as text and are as follows: " + soup.get_text()
-
-    # Clean up the extracted text
-    web_text = re.sub('\s+', ' ', web_text)  # Replace multiple spaces with a single space
-    web_text = web_text.replace('\n', '')  # Remove newlines
-
-    # Check the token count before adding the website text to the chat messages
-    if count_tokens(web_text) <= MAX_TOKENS:
-        st.session_state.messages.append({"role": "system", "content": web_text})
-        st.session_state.messages.append({"role": "system", "content": st.session_state.system_prompt})
-        st.session_state.url_entered = url  # Set a flag to indicate that the URL has been entered
-    else:
-        st.warning("The content of the website is too large and can't be processed.")
+custom_prompt = st.sidebar.text_input("Custom System Prompt", st.session_state.system_prompt)
+if custom_prompt != st.session_state.system_prompt:
+    st.session_state.system_prompt = custom_prompt
 
 
 # Function to get token
-async def get_token_async():
+def get_token():
     try:
         url = "https://api.github.com/copilot_internal/v2/token"
         headers = {
@@ -111,8 +57,7 @@ async def get_token_async():
             "Editor-Version": "vscode/1.83.0",
             "Editor-Plugin-Version": "copilot-chat/0.8.0"
         }
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers)
+        response = requests.get(url, headers=headers)
 
         if response.status_code == 200:
             json = response.json()
@@ -123,8 +68,17 @@ async def get_token_async():
     except Exception as e:
         return {"error": str(e)}
 
+# Get the token once and store the time
+if "token" not in st.session_state:
+    st.session_state.token = get_token()
+    st.session_state.token_time = time.time()
+
 # Function to interact with the chatbot
-async def openai_agent_test(messages, model="gpt-4", temperature=0.7):
+async def openai_agent_test(messages, model="gpt-4",temperature=0.5):
+    if time.time() - st.session_state.token_time > 600:
+        st.session_state.token = get_token()
+        st.session_state.token_time = time.time()
+
     async with httpx.AsyncClient() as client:
         r = await client.post(
             "https://api.githubcopilot.com/chat/completions",
@@ -142,31 +96,15 @@ async def openai_agent_test(messages, model="gpt-4", temperature=0.7):
         )
 
     if r.status_code != 200:
-        return "You may have exceeded the token limit. Please Restart the Session"
+        return "Response 404"
 
     return r.json()["choices"][0]["message"]["content"]
 
-# Function to handle chat
-async def handle_chat(messages, model="gpt-4", temperature=0.7):
-    if time.time() - st.session_state.token_time > 600:
-        st.session_state.token = await get_token_async()
-        st.session_state.token_time = time.time()
-
-    return await openai_agent_test(messages, model=model, temperature=temperature)
-
-# Get the token once and store the time
-if "token" not in st.session_state:
-    st.session_state.token = asyncio.run(get_token_async())
-    st.session_state.token_time = time.time()
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
 # Get assistant response
-assistant_response = asyncio.run(handle_chat(st.session_state.messages, model, temperature)) # Pass the selected model here
+assistant_response = asyncio.run(openai_agent_test(st.session_state.messages, model, temperature)) # Pass the selected model here
 
 # Clear conversation button
-if st.sidebar.button('New Session'):
+if st.sidebar.button('Clear conversation'):
     st.session_state['messages'] = []
 
 # Display chat messages from history on app rerun
@@ -175,6 +113,8 @@ for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+
+# ...
 
 # Accept user input
 if prompt := st.chat_input("What's up?"):
@@ -193,7 +133,7 @@ if prompt := st.chat_input("What's up?"):
         message_placeholder = st.empty()
 
     # Get assistant response
-    assistant_response = asyncio.run(handle_chat(st.session_state.messages, model, temperature)) # Pass the selected model here
+    assistant_response = asyncio.run(openai_agent_test(st.session_state.messages, model=model))  # Pass the selected model here
 
     # Display assistant response in chat message container
     full_response = ""
