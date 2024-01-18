@@ -6,9 +6,6 @@ openai
 beautifulsoup4
 PyPDF2
 pypdfium2
-langchain
-numpy
-faiss-cpu # or faiss-gpu if you have a compatible GPU
-openai
 python-dotenv
 pdfplumber
+youtube_transcript_api

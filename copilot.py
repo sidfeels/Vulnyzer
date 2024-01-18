@@ -8,7 +8,8 @@ from bs4 import BeautifulSoup
 import re
 import pdfplumber
 import tempfile
-
+import urllib.parse as urlparse
+from youtube_transcript_api import YouTubeTranscriptApi
 
 # Setting page title and header
 st.set_page_config(page_title="GPT", page_icon=":robot_face:")
@@ -23,7 +24,7 @@ if selected_model == "Custom":
 else:
     model = selected_model
 
-role = st.sidebar.selectbox("Select Role", ["sid", "Research Mode", "Sia (Software Dev)", "CodeRed (Jailbreak)" , "Custom"])
+role = st.sidebar.selectbox("Select Role", [ "sid", "default", "Sia", "Research", "CodeRed" , "Custom"])
 
 # Sidebar for temperature control
 temperature = st.sidebar.slider("Set Temperature", min_value=0.0, max_value=2.0, value=0.6, step=0.1)
@@ -63,13 +64,63 @@ if uploaded_file is not None:
     extracted_text = re.sub('[^A-Za-z0-9 .,?!;:+/*^()@#$%&{}[\]<>|\\~`-]', ' ', extracted_text)
     # Replace multiple spaces with a single space
     extracted_text = re.sub('\s+', ' ', extracted_text).strip()
+
+    extracted_text = extracted_text + ". the text above is extracted from a pdf file "
+
     # Format the extracted text as a code snippet
     extracted_text = f'```\n{extracted_text}\n```'
     # Send the extracted text to the chatbot as user input
     if not any(message["content"] == extracted_text for message in st.session_state.messages):
         st.session_state.messages.append({"role": "user", "content": extracted_text})
 
+# Add YouTube link input field in the sidebar
+youtube_link = st.sidebar.text_input("Paste a YouTube link")
 
+def extract_video_id(url):
+    """
+    Extracts the video ID from a YouTube URL.
+    """
+    # Parse the URL
+    parsed_url = urlparse.urlparse(url)
+
+    if parsed_url.hostname == 'youtu.be':
+        # If the URL is a 'youtu.be' URL, the video ID is the path
+        return parsed_url.path[1:]
+    if parsed_url.hostname in ('www.youtube.com', 'youtube.com'):
+        if parsed_url.path == '/watch':
+            # If the URL is a 'youtube.com' URL, the video ID is a query parameter
+            query = urlparse.parse_qs(parsed_url.query)
+            return query['v'][0]
+        if parsed_url.path[:7] == '/embed/':
+            # If the URL is an 'embed' URL, the video ID is the path
+            return parsed_url.path.split('/')[2]
+        if parsed_url.path[:3] == '/v/':
+            # If the URL is a '/v/' URL, the video ID is the path
+            return parsed_url.path.split('/')[2]
+    # If none of the above conditions are met, raise an error
+    raise ValueError("Invalid YouTube URL")
+
+# If a YouTube link is provided
+if youtube_link.strip():
+    # Extract video ID from the link
+    video_id = extract_video_id(youtube_link)
+
+    # Get the transcript
+    transcript = YouTubeTranscriptApi.get_transcript(video_id)
+
+    # The transcript is a list of dictionaries, each containing 'text', 'start', and 'duration'
+    # We only want the 'text' part, so let's extract that
+    transcript_text = ' '.join([x['text'] for x in transcript])
+
+    # Add your own lines to the transcript text
+    transcript_text = transcript_text + ". the text above is transcript of a youtube video "
+
+    # Format the transcript text as a code snippet
+    transcript_text = f'```\n{transcript_text}\n```'
+
+    # Send the transcript text to the chatbot as user input
+    if not any(message["content"] == transcript_text for message in st.session_state.messages):
+        st.session_state.messages.append({"role": "user", "content": transcript_text})
 
 if "selected_role" not in st.session_state or st.session_state.selected_role != role:
     st.session_state.selected_role = role
@@ -84,7 +135,6 @@ if role == "Custom":
     custom_prompt = st.sidebar.text_input("Custom System Prompt", st.session_state.system_prompt)
     if custom_prompt != st.session_state.system_prompt:
         st.session_state.system_prompt = custom_prompt
-
 
 # Function to get token
 def get_token():
