@@ -24,7 +24,7 @@ if selected_model == "Custom":
 else:
     model = selected_model
 
-role = st.sidebar.selectbox("Select Role", [ "sid", "default", "Sia", "Research", "CodeRed" , "Custom"])
+role = st.sidebar.selectbox("Select Role", [ "sid", "Sia (Software Dev)", "Research Mode", "CodeRed (Jailbreak)" , "Custom"])
 
 # Sidebar for temperature control
 temperature = st.sidebar.slider("Set Temperature", min_value=0.0, max_value=2.0, value=0.6, step=0.1)
