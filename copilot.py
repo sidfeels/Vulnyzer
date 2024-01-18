@@ -162,7 +162,7 @@ if "token" not in st.session_state:
     st.session_state.token_time = time.time()
 
 # Function to interact with the chatbot
-async def openai_agent_test(messages, model="gpt-4",temperature=0.5):
+async def openai_agent_test(messages, model="gpt-4",temperature=0.5, stream=True):
     if time.time() - st.session_state.token_time > 600:
         st.session_state.token = get_token()
         st.session_state.token_time = time.time()
@@ -220,17 +220,15 @@ if prompt := st.chat_input("What's up?"):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
 
-    # Get assistant response
-    assistant_response = asyncio.run(openai_agent_test(st.session_state.messages, model=model))  # Pass the selected model here
+        # Get assistant response
+        assistant_response = asyncio.run(openai_agent_test(st.session_state.messages, model=model, stream=True))  # Pass the selected model here
 
-    # Display assistant response in chat message container
-    full_response = ""
-    # Simulate stream of response with milliseconds delay
-    for chunk in assistant_response.split('. '):
-        full_response += chunk + "\n"
-        time.sleep(0.05)
-        # Add a blinking cursor to simulate typing
-        message_placeholder.markdown(full_response + "▌")
-    message_placeholder.markdown(full_response)
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+        full_response = ""
+        # Iterate over the stream of responses
+        for response in assistant_response:
+            print(response)  # print out the response to examine its structure
+            full_response += response  # if response is a string, you can directly add it to full_response
+            message_placeholder.markdown(full_response + "▌")
+        message_placeholder.markdown(full_response)
+        # Add assistant response to chat history
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
