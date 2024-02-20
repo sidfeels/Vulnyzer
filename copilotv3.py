@@ -15,7 +15,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 st.set_page_config(page_title="GPT", page_icon=":robot_face:")
 
 # Sidebar for model selection
-default_models = ["gpt-4","gpt-3.5", "Custom"]
+default_models = ["gpt-4","gpt-3.5", "gpt-4-0125-preview", "Custom"]
 selected_model = st.sidebar.selectbox("Select Model", default_models)
 
 # If 'Custom' is selected, show an additional input field for custom model name
