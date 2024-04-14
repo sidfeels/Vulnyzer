@@ -145,7 +145,7 @@ def get_token():
     try:
         url = "https://api.github.com/copilot_internal/v2/token"
         headers = {
-            "Authorization": "token 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",
+            "Authorization": "token gho_asew",
             "Editor-Version": "vscode/1.83.0",
             "Editor-Plugin-Version": "copilot-chat/0.8.0"
         }
